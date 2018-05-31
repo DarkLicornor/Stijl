@@ -40,9 +40,10 @@ int PRIORITY_TCAMERA = 25;
 int PRIORITY_TIMAGE = 25;
 int PRIORITY_TCHECKBATTERY = 25;
 
-RT_MUTEX mutex_robotStarted;
+RT_MUTEX mutex_com_robot;
 RT_MUTEX mutex_move;
 RT_MUTEX mutex_camera;
+RT_MUTEX mutex_com;
 
 // Déclaration des sémaphores
 RT_SEM sem_barrier;
@@ -56,8 +57,13 @@ RT_SEM sem_image;
 RT_QUEUE q_messageToMon;
 
 int MSG_QUEUE_SIZE = 10;
+
 Camera camera;
+
 char modeForCamera;
+
+// used in f_startRobot
+int cpt_com_robot;
 
 // Déclaration des ressources partagées
 int etatCommMoniteur = 1;

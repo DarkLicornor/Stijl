@@ -175,12 +175,18 @@ void f_checkBattery(void * arg) {
     rt_task_set_periodic(NULL, TM_NOW, 500000000);
     
     int batteryLevel;
+    
     while(1){
         rt_task_wait_period(NULL);
-        if(robotStarted == 1){
-            batteryLevel = send_command_to_robot(DMB_GET_VBAT)+48;
+        rt_mutex_acquire(&mutex_robotStarted, TM_INFINITE);
+        if(robotStarted){
+            
+            //batteryLevel = send_command_to_robot(DMB_GET_VBAT)+48;
+            batteryLevel = send_command_to_robot(DMB_GET_VBAT);
+            detect_lost_com_robot(batteryLevel);
             send_message_to_monitor(HEADER_STM_BAT,&batteryLevel);
         }
+        rt_mutex_release(&mutex_robotStarted);
     }
     
 }
@@ -332,10 +338,13 @@ void f_startRobot(void * arg) {
         printf("%s : sem_startRobot arrived => Start robot\n", info.name);
 #endif
         err = send_command_to_robot(DMB_START_WITHOUT_WD);
+        
+        
         if (err == 0) {
 #ifdef _WITH_TRACE_
             printf("%s : the robot is started\n", info.name);
 #endif
+            //cpt_lost_comm_robot = 0;
             rt_mutex_acquire(&mutex_robotStarted, TM_INFINITE);
             robotStarted = 1;
             rt_mutex_release(&mutex_robotStarted);
@@ -343,15 +352,18 @@ void f_startRobot(void * arg) {
             set_msgToMon_header(&msg, HEADER_STM_ACK);
             write_in_queue(&q_messageToMon, msg);
         } else {
+            
             MessageToMon msg;
             set_msgToMon_header(&msg, HEADER_STM_NO_ACK);
             write_in_queue(&q_messageToMon, msg);
+            
         }
     }
 }
 
 void f_move(void *arg) {
     /* INIT */
+    int err;
     RT_TASK_INFO info;
     rt_task_inquire(NULL, &info);
     printf("Init %s\n", info.name);
@@ -373,9 +385,13 @@ void f_move(void *arg) {
 #endif
         rt_mutex_acquire(&mutex_robotStarted, TM_INFINITE);
         if (robotStarted) {
+                
             rt_mutex_acquire(&mutex_move, TM_INFINITE);
-            send_command_to_robot(move);
+            err = send_command_to_robot(move);
             rt_mutex_release(&mutex_move);
+                     
+            detect_lost_com_robot(err);            
+            
 #ifdef _WITH_TRACE_
             printf("%s: the movement %c was sent\n", info.name, move);
 #endif            
@@ -383,6 +399,36 @@ void f_move(void *arg) {
         rt_mutex_release(&mutex_robotStarted);
     }
 }
+
+void detect_lost_com_robot(int status) {
+    rt_mutex_acquire(&mutex_com_robot, TM_INFINITE);
+    if (status != ROBOT_OK) {
+        
+        cpt_com_robot = 0;
+        
+    } else {
+        
+        cpt_com_robot ++;
+        if(cpt_com_robot > 3) {
+
+            send_message_to_monitor(HEADER_STM_LOST_DMB, "Robot connection has been lost");
+            
+            if(close_communication_robot() < 0) {
+                send_message_to_monitor(HEADER_MTS_MSG, "WTF error close communication robot ???");
+
+            } else {
+                send_message_to_monitor(HEADER_MTS_MSG, "Closed communication with robot");
+            }
+
+            cpt_com_robot = 0;
+            robotStarted = 0;
+            //rt_sem_v(&sem_startRobot);
+        }
+    }
+    
+    rt_mutex_release(&mutex_com_robot);
+}
+
 
 void write_in_queue(RT_QUEUE *queue, MessageToMon msg) {
     void *buff;

@@ -40,6 +40,7 @@ extern RT_TASK th_camera;
 extern RT_TASK th_image;
 extern RT_TASK th_checkBattery;
 
+extern RT_MUTEX mutex_com_robot;
 extern RT_MUTEX mutex_robotStarted;
 extern RT_MUTEX mutex_move;
 extern RT_MUTEX mutex_camera;
@@ -72,6 +73,9 @@ extern int PRIORITY_TIMAGE;
 //Msg to Th_Camera
 extern char modeForCamera;
 
+// cnt that detect loss com with robot
+extern int cpt_com_robot;
+
 void f_server(void *arg);
 void f_sendToMon(void *arg);
 void f_receiveFromMon(void *arg);
@@ -81,6 +85,8 @@ void f_startRobot(void *arg);
 void f_camera(void * arg);
 void f_image(void * arg);
 void f_checkBattery(void * arg);
+
+void detect_lost_com_robot(int status);
 
 #endif /* FUNCTIONS_H */
 
