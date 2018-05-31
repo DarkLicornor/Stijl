@@ -41,9 +41,9 @@ int PRIORITY_TIMAGE = 25;
 int PRIORITY_TCHECKBATTERY = 25;
 
 RT_MUTEX mutex_com_robot;
+RT_MUTEX mutex_robotStarted;
 RT_MUTEX mutex_move;
 RT_MUTEX mutex_camera;
-RT_MUTEX mutex_com;
 
 // Déclaration des sémaphores
 RT_SEM sem_barrier;
