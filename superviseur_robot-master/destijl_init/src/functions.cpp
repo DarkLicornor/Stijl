@@ -222,7 +222,6 @@ void f_receiveFromMon(void *arg) {
     MessageFromMon msg;
     MessageToMon msgTest;
     int err;
-
     /* INIT */
     RT_TASK_INFO info;
     rt_task_inquire(NULL, &info);
@@ -238,6 +237,7 @@ void f_receiveFromMon(void *arg) {
         printf("%s : waiting for a message from monitor\n", info.name);
 #endif
         err = receive_message_from_monitor(msg.header, msg.data);
+       
 #ifdef _WITH_TRACE_
         printf("%s: msg {header:%s,data=%s} received from UI\n", info.name, msg.header, msg.data);
 #endif
@@ -277,7 +277,20 @@ void f_receiveFromMon(void *arg) {
                rt_sem_v(&sem_camera);
                 
         }
-    } while (err > 0);
+         if(err <= 0){
+            printf("%d loss com server - monitor------------------------------------------------------------------------------\n", err);
+            close_communication_robot();
+            //send_command_to_robot(stop); //>WTFFFFF
+            close_camera(&camera);
+            printf("com closed\n");
+            close_server();
+            int serr = run_nodejs("/usr/local/bin/node", "/home/pi/Interface_Robot/server.js");
+            open_server();
+            rt_sem_broadcast(&sem_serverOk);
+        }
+    } while (err);
+    
+   
 
 }
 
